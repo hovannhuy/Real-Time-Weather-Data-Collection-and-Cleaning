@@ -86,6 +86,10 @@ if live_btn or state_key not in st.session_state:
         df_hr_fc, df_day_fc, infer_ms = rt_module.forecast_7_days_via_weight_inference(
             weights_bundle, df_clean_live, selected_loc, horizon_hours=horizon_hours
         )
+        # attrs chứa DataFrame (synoptic_future/model_context) gây lỗi PyArrow Table.from_pandas serialization
+        df_clean_live.attrs.clear()
+        df_raw_live.attrs.clear()
+        df_hr_fc.attrs.clear()
         st.session_state[state_key] = {
             "df_raw_live": df_raw_live,
             "df_clean_live": df_clean_live,
@@ -98,8 +102,11 @@ if live_btn or state_key not in st.session_state:
 res = st.session_state[state_key]
 df_raw_live = res["df_raw_live"]
 df_clean_live = res["df_clean_live"]
+df_clean_live.attrs.clear()
+df_raw_live.attrs.clear()
 api_status = res["api_status"]
 df_hr_fc = res["df_hr_fc"]
+df_hr_fc.attrs.clear()
 df_day_fc = res["df_day_fc"]
 infer_ms = res["infer_ms"]
 
@@ -207,8 +214,10 @@ with tab1:
     col_dl1, col_dl2 = st.columns([3, 1])
     with col_dl1:
         st.markdown("#### Bảng Chi Tiết Dự Báo Theo Từng Giờ")
+        df_hr_fc_display = df_hr_fc[["step_hour", "time", "city", "temperature_2m", "relative_humidity_2m", "wind_speed_10m", "precipitation", "pressure_msl"]].copy()
+        df_hr_fc_display.attrs.clear()
         st.dataframe(
-            df_hr_fc[["step_hour", "time", "city", "temperature_2m", "relative_humidity_2m", "wind_speed_10m", "precipitation", "pressure_msl"]],
+            df_hr_fc_display,
             use_container_width=True,
             height=260,
         )
@@ -245,7 +254,8 @@ with tab2:
             f"Số ô bị khuyết: `{int(df_raw_live[['temperature_2m', 'relative_humidity_2m', 'wind_speed_10m', 'precipitation', 'pressure_msl']].isna().sum().sum())}` ô | "
             f"Định dạng thời gian hỗn hợp giữa 4 API."
         )
-        df_raw_display = df_raw_live.drop(columns=["location_id", "region"], errors="ignore")
+        df_raw_display = df_raw_live.drop(columns=["location_id", "region"], errors="ignore").copy()
+        df_raw_display.attrs.clear()
         st.dataframe(df_raw_display.tail(25), use_container_width=True, height=340)
 
     with c_clean:
@@ -255,8 +265,10 @@ with tab2:
             f"Số ô khuyết: `0` ô | "
             f"Số giờ hợp nhất từ nhiều API: `{int((df_clean_live['num_sources'] >= 2).sum())}` giờ."
         )
+        df_clean_display = df_clean_live[["time", "city", "temperature_2m", "relative_humidity_2m", "wind_speed_10m", "precipitation", "pressure_msl", "num_sources", "sources"]].tail(25).copy()
+        df_clean_display.attrs.clear()
         st.dataframe(
-            df_clean_live[["time", "city", "temperature_2m", "relative_humidity_2m", "wind_speed_10m", "precipitation", "pressure_msl", "num_sources", "sources"]].tail(25),
+            df_clean_display,
             use_container_width=True,
             height=340,
         )
@@ -307,7 +319,8 @@ with tab3:
     st.table(q_df)
 
     st.markdown("### Thống Kê Mô Tả Toàn Bộ 20 Địa Điểm Khảo Sát")
-    df_summary_display = df_city_summary.drop(columns=["location_id", "region"], errors="ignore")
+    df_summary_display = df_city_summary.drop(columns=["location_id", "region"], errors="ignore").copy()
+    df_summary_display.attrs.clear()
     st.dataframe(df_summary_display, use_container_width=True, height=360)
 
     st.markdown("### Bộ Biểu Đồ Phân Tích Chất Lượng Dữ Liệu Và Khí Tượng")
